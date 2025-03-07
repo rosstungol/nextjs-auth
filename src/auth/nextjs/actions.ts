@@ -7,6 +7,8 @@ import { eq } from 'drizzle-orm'
 import { UserTable } from '@/drizzle/schema'
 import { db } from '@/drizzle/db'
 import { generateSalt, hashPassword } from '../core/passwordHasher'
+import { createUserSession } from '../core/session'
+import { cookies } from 'next/headers'
 
 export async function signIn(unsafeData: z.infer<typeof signInSchema>) {
 	const { success, data } = signInSchema.safeParse(unsafeData)
@@ -31,14 +33,19 @@ export async function signUp(unsafeData: z.infer<typeof signUpSchema>) {
 		const salt = generateSalt()
 		const hashedPassword = await hashPassword(data.password, salt)
 
-		const [user] = await db.insert(UserTable).values({
-			name: data.name,
-			email: data.email,
-			password: hashedPassword,
-			salt,
-		})
+		const [user] = await db
+			.insert(UserTable)
+			.values({
+				name: data.name,
+				email: data.email,
+				password: hashedPassword,
+				salt,
+			})
+			.returning({ id: UserTable.id, role: UserTable.role })
 
 		if (user == null) return 'Unable to create account'
+
+		await createUserSession(user, await cookies())
 	} catch {
 		return 'Unable to create account'
 	}
