@@ -6,7 +6,7 @@ import { signInSchema, signUpSchema } from './schemas'
 import { eq } from 'drizzle-orm'
 import { UserTable } from '@/drizzle/schema'
 import { db } from '@/drizzle/db'
-import { generateSalt, hashPassword } from '../core/passwordHasher'
+import { comparePasswords, generateSalt, hashPassword } from '../core/passwordHasher'
 import { createUserSession } from '../core/session'
 import { cookies } from 'next/headers'
 
@@ -14,6 +14,23 @@ export async function signIn(unsafeData: z.infer<typeof signInSchema>) {
 	const { success, data } = signInSchema.safeParse(unsafeData)
 
 	if (!success) return 'Unable to log you in'
+
+	const user = await db.query.UserTable.findFirst({
+		columns: { password: true, salt: true, id: true, email: true, role: true },
+		where: eq(UserTable.email, data.email),
+	})
+
+	if (user == null) return 'Unable to log you in'
+
+	const isCorrectPassword = await comparePasswords({
+		hashedPassword: user.password,
+		password: data.password,
+		salt: user.salt,
+	})
+
+	if (!isCorrectPassword) return 'Unable to log you in'
+
+	await createUserSession(user, await cookies())
 
 	redirect('/')
 }
