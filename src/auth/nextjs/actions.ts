@@ -6,8 +6,12 @@ import { signInSchema, signUpSchema } from './schemas'
 import { eq } from 'drizzle-orm'
 import { UserTable } from '@/drizzle/schema'
 import { db } from '@/drizzle/db'
-import { comparePasswords, generateSalt, hashPassword } from '../core/passwordHasher'
-import { createUserSession } from '../core/session'
+import {
+	comparePasswords,
+	generateSalt,
+	hashPassword,
+} from '../core/passwordHasher'
+import { createUserSession, removeUserFromSession } from '../core/session'
 import { cookies } from 'next/headers'
 
 export async function signIn(unsafeData: z.infer<typeof signInSchema>) {
@@ -71,5 +75,6 @@ export async function signUp(unsafeData: z.infer<typeof signUpSchema>) {
 }
 
 export async function logOut() {
+	await removeUserFromSession(await cookies())
 	redirect('/')
 }
