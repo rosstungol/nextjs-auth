@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserFromSession } from './auth/core/session'
+import { getUserFromSession, updateUserSessionExpiration } from './auth/core/session'
 
 const privateRoutes = ['/private']
 const adminRoutes = ['/admin']
 
 export async function middleware(request: NextRequest) {
 	const response = (await middlewareAuth(request)) ?? NextResponse.next()
+
+	await updateUserSessionExpiration({
+		set: (key, value, options) => {
+			response.cookies.set({...options, name: key, value })
+		},
+		get: key => request.cookies.get(key)
+	})
 
 	return response
 }

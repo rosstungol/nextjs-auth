@@ -1,8 +1,7 @@
-import { userRoles } from '@/drizzle/schema'
 import { z } from 'zod'
-import crypto from 'crypto'
+import { userRoles } from '@/drizzle/schema'
 import { redis } from '@/redis/redis'
-import { parseSetCookie } from 'next/dist/compiled/@edge-runtime/cookies'
+import crypto from 'crypto'
 
 // Seven days in seconds
 const SESSION_EXPIRATION_SECONDS = 60 * 60 * 24 * 7
@@ -37,12 +36,40 @@ export function getUserFromSession(cookies: Pick<Cookies, 'get'>) {
 	return getUserSessionById(sessionId)
 }
 
+export async function updateUserSessionData(
+	user: UserSession,
+	cookies: Pick<Cookies, 'get'>
+) {
+	const sessionId = cookies.get(COOKIE_SESSION_KEY)?.value
+	if (sessionId == null) return null
+
+	await redis.set(`session:${sessionId}`, sessionSchema.parse(user), {
+		ex: SESSION_EXPIRATION_SECONDS,
+	})
+}
+
 export async function createUserSession(
 	user: UserSession,
 	cookies: Pick<Cookies, 'set'>
 ) {
 	const sessionId = crypto.randomBytes(512).toString('hex').normalize()
 	await redis.set(`session:${sessionId}`, sessionSchema.parse(user), {
+		ex: SESSION_EXPIRATION_SECONDS,
+	})
+
+	setCookie(sessionId, cookies)
+}
+
+export async function updateUserSessionExpiration(
+	cookies: Pick<Cookies, 'get' | 'set'>
+) {
+	const sessionId = cookies.get(COOKIE_SESSION_KEY)?.value
+	if (sessionId == null) return null
+
+	const user = await getUserSessionById(sessionId)
+	if (user == null) return
+
+	await redis.set(`session:${sessionId}`, user, {
 		ex: SESSION_EXPIRATION_SECONDS,
 	})
 
