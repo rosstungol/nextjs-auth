@@ -8,29 +8,39 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card'
-import { SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
-import { auth } from '@clerk/nextjs/server'
 import Link from 'next/link'
 
 export default async function HomePage() {
-	const { userId } = await auth()
+	const fullUser = await getCurrentUser({ withFullUser: true })
 
 	return (
 		<div className="container mx-auto p-4">
-			{userId == null ? (
+			{fullUser == null ? (
 				<div className="flex gap-4">
 					<Button asChild>
-						<SignInButton />
+						<Link href="/sign-in">Sign in</Link>
 					</Button>
 					<Button asChild>
-						<SignUpButton />
+						<Link href="/sign-up">Sign up</Link>
 					</Button>
 				</div>
 			) : (
 				<Card className="max-w-[500px] mt-4">
 					<CardHeader>
-						<UserButton />
+						<CardTitle>User: {fullUser.name}</CardTitle>
+						<CardDescription>Role: {fullUser.role}</CardDescription>
 					</CardHeader>
+					<CardFooter className="flex gap-4">
+						<Button asChild variant="outline">
+							<Link href="/private">Private Page</Link>
+						</Button>
+						{fullUser.role === 'admin' && (
+							<Button asChild variant="outline">
+								<Link href="/admin">Admin Page</Link>
+							</Button>
+						)}
+						<LogOutButton />
+					</CardFooter>
 				</Card>
 			)}
 		</div>
