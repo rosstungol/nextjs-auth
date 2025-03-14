@@ -1,5 +1,8 @@
 'use client'
 
+import Link from 'next/link'
+import { useState } from 'react'
+import { z } from 'zod'
 import {
 	Form,
 	FormControl,
@@ -8,14 +11,11 @@ import {
 	FormLabel,
 	FormMessage,
 } from '@/components/ui/form'
-import { signIn } from '../actions'
+import { oAuthSignIn, signIn } from '../actions'
 import { useForm } from 'react-hook-form'
-import { z } from 'zod'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
 import { signInSchema } from '../schemas'
-import Link from 'next/link'
 
 export function SignInForm() {
 	const [error, setError] = useState<string>()
@@ -35,7 +35,20 @@ export function SignInForm() {
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 				{error && <p className="text-destructive">{error}</p>}
-
+				<div className="flex gap-4">
+					<Button
+						type="button"
+						onClick={async () => await oAuthSignIn('discord')}
+					>
+						Discord
+					</Button>
+					<Button
+						type="button"
+						onClick={async () => await oAuthSignIn('github')}
+					>
+						Github
+					</Button>
+				</div>
 				<FormField
 					control={form.control}
 					name="email"

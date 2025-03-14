@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { redirect } from 'next/navigation'
 import { signInSchema, signUpSchema } from './schemas'
 import { eq } from 'drizzle-orm'
-import { UserTable } from '@/drizzle/schema'
+import { OAuthProvider, UserTable } from '@/drizzle/schema'
 import { db } from '@/drizzle/db'
 import {
 	comparePasswords,
@@ -77,4 +77,8 @@ export async function signUp(unsafeData: z.infer<typeof signUpSchema>) {
 export async function logOut() {
 	await removeUserFromSession(await cookies())
 	redirect('/')
+}
+
+export async function oAuthSignIn(provider: OAuthProvider) {
+	// redirect(url)
 }
