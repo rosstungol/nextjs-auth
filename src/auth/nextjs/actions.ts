@@ -13,6 +13,7 @@ import {
 } from '../core/passwordHasher'
 import { createUserSession, removeUserFromSession } from '../core/session'
 import { cookies } from 'next/headers'
+import { OAuthClient } from '../core/oauth/base'
 
 export async function signIn(unsafeData: z.infer<typeof signInSchema>) {
 	const { success, data } = signInSchema.safeParse(unsafeData)
@@ -80,5 +81,5 @@ export async function logOut() {
 }
 
 export async function oAuthSignIn(provider: OAuthProvider) {
-	// redirect(url)
+	redirect(new OAuthClient().createAuthUrl(await cookies()))
 }
