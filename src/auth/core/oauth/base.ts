@@ -1,11 +1,18 @@
-import { env } from '@/data/env/server'
-import { Cookies } from '../session'
 import { z } from 'zod'
+import { Cookies } from '../session'
+import { env } from '@/data/env/server'
 
 export class OAuthClient<T> {
 	private readonly tokenSchema = z.object({
 		access_token: z.string(),
 		token_type: z.string(),
+	})
+
+	private readonly userSchema = z.object({
+		id: z.string(),
+		username: z.string(),
+		global_name: z.string().nullable(),
+		email: z.string().email(),
 	})
 
 	private get redirectUrl() {
@@ -24,6 +31,26 @@ export class OAuthClient<T> {
 
 	async fetchUser(code: string) {
 		const { accessToken, tokenType } = await this.fetchToken(code)
+
+		const user = await fetch('https://discord.com/api/users/@me', {
+			headers: {
+				Authorization: `${tokenType} ${accessToken}`,
+			},
+		})
+			.then((res) => res.json())
+			.then((rawData) => {
+				const { data, success, error } = this.userSchema.safeParse(rawData)
+
+				if (!success) throw new InvalidUserError(error)
+
+				return data
+			})
+
+		return {
+			id: user.id,
+			email: user.email,
+			name: user.global_name ?? user.username,
+		}
 	}
 
 	private fetchToken(code: string) {
@@ -43,7 +70,6 @@ export class OAuthClient<T> {
 		})
 			.then((res) => res.json())
 			.then((rawData) => {
-				console.log(rawData)
 				const { data, success, error } = this.tokenSchema.safeParse(rawData)
 				if (!success) throw new InvalidTokenError(error)
 
@@ -58,6 +84,13 @@ export class OAuthClient<T> {
 export class InvalidTokenError extends Error {
 	constructor(zodError: z.ZodError) {
 		super('Invalid Token')
+		this.cause = zodError
+	}
+}
+
+export class InvalidUserError extends Error {
+	constructor(zodError: z.ZodError) {
+		super('Invalid User')
 		this.cause = zodError
 	}
 }
