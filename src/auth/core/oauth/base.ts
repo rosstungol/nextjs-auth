@@ -27,14 +27,18 @@ export class OAuthClient<T> {
 
 	createAuthUrl(cookies: Pick<Cookies, 'set'>) {
 		const state = createState(cookies)
-
+		const codeVerifer = createCodeVerifier(cookies)
 		const url = new URL('https://discord.com/oauth2/authorize')
 		url.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
 		url.searchParams.set('redirect_uri', this.redirectUrl.toString())
 		url.searchParams.set('response_type', 'code')
 		url.searchParams.set('scope', 'identify email')
 		url.searchParams.set('state', state)
-
+		url.searchParams.set('code_challenge_method', 'S256')
+		url.searchParams.set(
+			'code_challenge',
+			crypto.hash('sha256', codeVerifer, 'base64url')
+		)
 		return url.toString()
 	}
 
@@ -42,7 +46,10 @@ export class OAuthClient<T> {
 		const isValidState = validateState(state, cookies)
 		if (!isValidState) throw new InvalidStateError()
 
-		const { accessToken, tokenType } = await this.fetchToken(code)
+		const { accessToken, tokenType } = await this.fetchToken(
+			code,
+			getCodeVerifier(cookies)
+		)
 
 		const user = await fetch('https://discord.com/api/users/@me', {
 			headers: {
@@ -65,7 +72,7 @@ export class OAuthClient<T> {
 		}
 	}
 
-	private fetchToken(code: string) {
+	private fetchToken(code: string, codeVerifier: string) {
 		return fetch('https://discord.com/api/oauth2/token', {
 			method: 'POST',
 			headers: {
@@ -78,6 +85,7 @@ export class OAuthClient<T> {
 				grant_type: 'authorization_code',
 				client_id: env.DISCORD_CLIENT_ID,
 				client_secret: env.DISCORD_CLIENT_SECRET,
+				code_verifier: codeVerifier,
 			}),
 		})
 			.then((res) => res.json())
@@ -113,6 +121,12 @@ export class InvalidStateError extends Error {
 	}
 }
 
+export class InvalidCodeVerifierError extends Error {
+	constructor() {
+		super('Invalid Code Verifier')
+	}
+}
+
 function createState(cookies: Pick<Cookies, 'set'>) {
 	const state = crypto.randomBytes(64).toString('hex').normalize()
 	cookies.set(STATE_COOKIE_KEY, state, {
@@ -125,8 +139,27 @@ function createState(cookies: Pick<Cookies, 'set'>) {
 	return state
 }
 
+function createCodeVerifier(cookies: Pick<Cookies, 'set'>) {
+	const codeVerifier = crypto.randomBytes(64).toString('hex').normalize()
+	cookies.set(CODE_VERIFIER_COOKIE_KEY, codeVerifier, {
+		secure: true,
+		httpOnly: true,
+		sameSite: 'lax',
+		expires: Date.now() + COOKIE_EXPIRATION_SECONDS * 1000,
+	})
+
+	return codeVerifier
+}
+
 function validateState(state: string, cookies: Pick<Cookies, 'get'>) {
 	const cookieState = cookies.get(STATE_COOKIE_KEY)?.value
 
 	return cookieState === state
+}
+
+function getCodeVerifier(cookies: Pick<Cookies, 'get'>) {
+	const codeVerifier = cookies.get(CODE_VERIFIER_COOKIE_KEY)?.value
+	if (codeVerifier == null) throw new InvalidCodeVerifierError()
+
+	return codeVerifier
 }
