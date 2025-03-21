@@ -10,7 +10,7 @@ import {
 	UserOAuthAccountTable,
 	UserTable,
 } from '@/drizzle/schema'
-import { OAuthClient } from '@/auth/core/oauth/base'
+import { getOAuthClient, OAuthClient } from '@/auth/core/oauth/base'
 import { createUserSession } from '@/auth/core/session'
 
 export async function GET(
@@ -30,12 +30,10 @@ export async function GET(
 		)
 	}
 
+	const oAuthClient = getOAuthClient(provider)
+
 	try {
-		const oAuthUser = await new OAuthClient().fetchUser(
-			code,
-			state,
-			await cookies()
-		)
+		const oAuthUser = await oAuthClient.fetchUser(code, state, await cookies())
 		const user = await connectUserToAccount(oAuthUser, provider)
 		await createUserSession(user, await cookies())
 	} catch (error) {

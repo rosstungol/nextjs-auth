@@ -13,7 +13,7 @@ import {
 } from '../core/passwordHasher'
 import { createUserSession, removeUserFromSession } from '../core/session'
 import { cookies } from 'next/headers'
-import { OAuthClient } from '../core/oauth/base'
+import { getOAuthClient } from '../core/oauth/base'
 
 export async function signIn(unsafeData: z.infer<typeof signInSchema>) {
 	const { success, data } = signInSchema.safeParse(unsafeData)
@@ -25,7 +25,9 @@ export async function signIn(unsafeData: z.infer<typeof signInSchema>) {
 		where: eq(UserTable.email, data.email),
 	})
 
-	if (user == null) return 'Unable to log you in'
+	if (user == null || user.password == null || user.salt == null) {
+		return 'Unable to log you in'
+	}
 
 	const isCorrectPassword = await comparePasswords({
 		hashedPassword: user.password,
@@ -81,5 +83,6 @@ export async function logOut() {
 }
 
 export async function oAuthSignIn(provider: OAuthProvider) {
-	redirect(new OAuthClient().createAuthUrl(await cookies()))
+	const oAuthClient = getOAuthClient(provider)
+	redirect(oAuthClient.createAuthUrl(await cookies()))
 }
