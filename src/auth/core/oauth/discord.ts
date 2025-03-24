@@ -7,7 +7,7 @@ export function createDiscordOAuthClient() {
 		provider: 'discord',
 		clientId: env.DISCORD_CLIENT_ID,
 		clientSecret: env.DISCORD_CLIENT_SECRET,
-		scopes: ['identify email'],
+		scopes: ['identify', 'email'],
 		urls: {
 			auth: 'https://discord.com/oauth2/authorize',
 			token: 'https://discord.com/api/oauth2/token',
