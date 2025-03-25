@@ -4,6 +4,7 @@ import { Cookies } from '../session'
 import { env } from '@/data/env/server'
 import { OAuthProvider } from '@/drizzle/schema'
 import { createDiscordOAuthClient } from './discord'
+import { createGithubOAuthClient } from './github'
 
 const STATE_COOKIE_KEY = 'oAuthState'
 const CODE_VERIFIER_COOKIE_KEY = 'oAuthCodeVerifier'
@@ -140,8 +141,7 @@ export function getOAuthClient(provider: OAuthProvider) {
 		case 'discord':
 			return createDiscordOAuthClient()
 		case 'github':
-			return createDiscordOAuthClient()
-		// return createGithubOAuthClient()
+			return createGithubOAuthClient()
 		default:
 			throw new Error(`Invalid provider: ${provider satisfies never}`)
 	}

@@ -9,6 +9,8 @@ export const env = createEnv({
 		DISCORD_CLIENT_ID: z.string().min(1),
 		DISCORD_CLIENT_SECRET: z.string().min(1),
 		OAUTH_REDIRECT_URL_BASE: z.string().url(),
+		GITHUB_CLIENT_ID: z.string().min(1),
+		GITHUB_CLIENT_SECRET: z.string().min(1),
 	},
 	experimental__runtimeEnv: process.env,
 	emptyStringAsUndefined: true,
